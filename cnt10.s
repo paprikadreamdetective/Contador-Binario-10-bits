@@ -1,144 +1,8 @@
-.thumb              @ Assembles using thumb mode
-.cpu cortex-m3      @ Generates Cortex-M3 instructions
-.syntax unified
-
-.include "ivt.s"
-.include "gpio_map.inc"
-.include "rcc_map.inc"
-
 .section .text
-.align	1
+.align  1
 .syntax unified
 .thumb
-.global __main
-
-delay:
-        // Prologo
-        push    {r7} @ backs r7 up
-        sub     sp, sp, #28 @ reserves a 32-byte function frame
-        add     r7, sp, #0 @ updates r7
-        str     r0, [r7] @ backs ms up
-        // Body function
-        //ldr     r0, =2666667
-        mov     r0, #1023 @ ticks = 255, adjust to achieve 1 ms delay
-        str     r0, [r7, #16]
-        // for (i = 0; i < ms; i++)
-        mov     r0, #0 @ i = 0;
-        str     r0, [r7, #8]
-        b       F3
-        // for (j = 0; j < tick; j++)
-F4:     mov     r0, #0 @ j = 0;
-        str     r0, [r7, #12]
-        b       F5
-F6:     ldr     r0, [r7, #12] @ j++;
-        add     r0, #1
-        str     r0, [r7, #12]
-F5:     ldr     r0, [r7, #12] @ j < ticks;
-        ldr     r1, [r7, #16]
-        cmp     r0, r1
-        blt     F6
-        ldr     r0, [r7, #8] @ i++;
-        add     r0, #1
-        str     r0, [r7, #8]
-F3:     ldr     r0, [r7, #8] @ i < ms
-        ldr     r1, [r7]
-        cmp     r0, r1
-        blt     F4
-        // Epilogue
-        adds    r7, r7, #28
-        mov	    sp, r7
-        pop	    {r7}
-        bx	    lr
-.size	delay, .-delay
-
-is_button_pressed:
-        /*Creacion del prologo marco de tamaño de 16 bytes*/
-        push    {r7, lr}
-        sub     sp, sp, #20
-        adds    r7, sp, #0
-        /*Se respaldan los argumentos*/
-        str     r0, [r7]
-        //str     r1, [r7]
-        /*---------------------------*/
-        /*digitalRead()*/
-        // read button input
-        ldr     r0, =GPIOB_BASE
-        ldr     r0, [r0, GPIOx_IDR_OFFSET]
-        ldr     r3, [r7]
-        and     r3, r0, r3
-        lsrs    r0, r3, #0
-        // if(button is not pressed)
-        cmp     r0, 0x0
-        bne     J1
-        // return false
-        mov     r3, #0
-        mov     r0, r3
-        adds    r7, r7, #20
-        mov     sp, r7
-        pop     {r7, lr}
-        bx      lr
-J1:
-        // counter = 0
-        mov     r3, #0
-        str     r3, [r7, #8]
-        // Se brinca al ciclo for
-        // i = 0
-        mov     r3, #0
-        str     r3, [r7, #4]
-        b       F
-F_1:    // invocacion de delay
-        mov     r0, #5
-        bl      delay
-        // read button input
-        ldr     r0, =GPIOB_BASE
-        ldr     r0, [r0, GPIOx_IDR_OFFSET]
-        ldr    r3, [r7]
-        and     r3, r0, r3
-        lsrs    r0, r3, #0
-        // if(button is not pressed)
-        cmp     r0, 0x0
-        bne     J2
-        // counter = 0
-        ldr     r3, [r7, #8]
-        mov     r3, #0
-        str     r3, [r7, #8]
-        b       J3
-J2:     // else
-        // counter = counter + 1
-        ldr     r3, [r7, #8]
-        adds    r3, r3, #1
-        str     r3, [r7, #8]
-        // if (counter >= 4)
-        ldr     r0, [r7, #8]
-        cmp     r0, 0x4
-        blt     J3
-        // return true
-        mov     r3, #1
-        mov     r0, r3
-        adds    r7, r7, #20
-        mov     sp, r7
-        pop     {r7, lr}
-        bx      lr
-J3:
-        // i++
-        ldr     r3, [r7, #4]
-        adds    r3, r3, #1
-        str     r3, [r7, #4]
-F:      // Se carga i
-        ldr     r3, [r7, #4]
-        mov     r0, #10
-        cmp     r3, r0
-        blt     F_1
-        /*---------------------------*/
-        /*Creacion del epilogo de la funcion*/
-        // return false
-        mov     r3, #0
-        mov     r0, r3
-        adds    r7, r7, #20
-        mov     sp, r7
-        pop     {r7, lr}
-        bx      lr
-.size	is_button_pressed, .-is_button_pressed
+.global ASC
 
 ASC:
         /*Prologo*/
@@ -257,6 +121,12 @@ FOR1:   // Cargar i
         bx      lr
 .size	ASC, .-ASC
 
+.section .text
+.align  1
+.syntax unified
+.thumb
+.global DESC
+
 DESC:
         /*Prologo*/
         push    {r7}
@@ -372,99 +242,3 @@ FOR3:
         pop     {r7}
         bx      lr
 .size	DESC, .-DESC
-
-// void setup() ---------------------------------------------------------------
-__main:
-        push    {r7, lr}
-        sub     sp, sp, #20
-        add     r7, sp, #0
-        // Habilitar señal de reloj para los puertos A y B.
-        ldr     r0, =RCC_BASE
-        mov     r3, 0xc
-        str     r3, [r0, RCC_APB2ENR_OFFSET]
-        /*Configuramos los puertos de entrada*/
-        // Inicializar las salidas
-        ldr     r0, =GPIOB_BASE
-        ldr     r3, =0x44444488
-        str     r3, [r0, GPIOx_CRH_OFFSET]
-        /* int i = 1024*/
-        mov     r3, #1024
-        str     r3, [r7]
-        /* const buttonA */
-        mov     r3, #0
-        str     r3, [r7, #4]
-        /* const buttonB */
-        mov     r3, #0
-        str     r3, [r7, #8]
-// void loop()
-loop:
-        // read button A
-        mov     r0, #1
-        bl      is_button_pressed
-        mov     r3, r0
-        str     r3, [r7, #4]
-        // read button B
-        mov     r0, #2
-        bl      is_button_pressed
-        mov     r3, r0
-        str     r3, [r7, #8]
-        // if (asc)
-        ldr     r3, [r7, #8]
-        cmp     r3, 0x1
-        bne     X1
-        // delay();
-        mov     r0, #50
-        bl      delay
-        // i++;
-        ldr     r3, [r7]
-        adds    r3, r3, 0x1
-        str     r3, [r7]
-        // ASC(i);
-        ldr     r3, [r7]
-        mov     r0, r3
-        bl      ASC
-X1:
-        // if (desc)
-        ldr     r3, [r7, #4]
-        cmp     r3, 0x1
-        bne     X2
-        // delay();
-        mov     r0, #50
-        bl      delay
-        // i--;
-        ldr     r3, [r7]
-        subs    r3, r3, 0x1
-        str     r3, [r7]
-        // DESC(i);
-        ldr     r3, [r7]
-        mov     r0, r3
-        bl      DESC
-X2:
-        // if (desc && asc)
-        ldr     r3, [r7, #4]
-        cmp     r3, 0x1
-        bne     X3
-        ldr     r3, [r7, #8]
-        cmp     r3, 0x1
-        bne     X3
-        // delay();
-        mov     r0, #50
-        bl      delay
-        // ASC(1024);
-        mov     r3, #1024
-        mov     r0, r3
-        bl      ASC
-        // delay();
-        mov     r0, #50
-        bl      delay
-        // DESC(1024);
-        mov     r3, #1024
-        mov     r0, r3
-        bl      DESC
-        // i = 1024;
-        mov     r3, #1024
-        str     r3, [r7]
-X3:
-        mov     r0, #50
-        bl      delay
-        b       loop
