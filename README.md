@@ -28,4 +28,10 @@ Tambien hay que tener en cuenta que si el codigo fuente fue escrito en diferente
 # List of source files
 SRCS = cnt10.s ivt.s default_handler.s reset_handler.s # En esta parte van los archivos fuente a compilar
 ```
+## 3. Diagrama del hardware.
+Para las salidas de los leds, se usaron los pines A0-A9, para las entradas de los pines B0 y B1, el boton de incremento esta configurado en el pin B0, y el boton de decremento esta configurado al pin B1.
+![esquematico](https://github.com/paprikadreamdetective/Contador-Binario-10-bits/assets/133156970/9e6322b6-36eb-4b77-bc25-f970ac820b54)
+
+
+
 
